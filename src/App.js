@@ -202,14 +202,14 @@ class Flashcard extends Component {
     return (
       <div><center>
         <div className={className} onClick={this.flip.bind(this)}>
-        	<div className="flipper">
-        		<div className="front" style={{display: this.state.reveal ? 'none' : ''}}>
+          <div className="flipper">
+            <div className="front" style={{display: this.state.reveal ? 'none' : ''}}>
               <div dangerouslySetInnerHTML={{__html: this.props.question.outerHTML}} />
-        		</div>
-        		<div className="back" style={{display: this.state.reveal ? '' : 'none'}}>
+            </div>
+            <div className="back" style={{display: this.state.reveal ? '' : 'none'}}>
               {this.props.answer}
-        		</div>
-        	</div>
+            </div>
+          </div>
         </div>
         <button className="answerButton" onClick={this.flip.bind(this)}>flip</button>
       </center></div>

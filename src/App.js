@@ -3,8 +3,15 @@ import Teoria from 'teoria';
 import Vex from 'vexflow';
 import './App.css';
 
-const startNotes =   ['F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A'];
-const startOctaves = ['3', '3', '4', '4', '4', '4', '4', '4', '4', '5'];
+const startNotes = {
+  treble: ['F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A'],
+  bass:   ['F', 'G', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'A'],
+};
+const startOctaves = {
+  treble: ['3', '3', '4', '4', '4', '4', '4', '4', '4'],
+  bass:   ['2', '2', '3', '3', '3', '3', '3', '3', '3'],
+};
+
 const startAccidentals = ['', '#', '', 'b', ''];
 const legalIntervals = [
   /*'P1'*/ 'P4', 'P5', 'P8', 
@@ -25,30 +32,27 @@ function getCount() {
   return null;
 }
 function getQuestion(i) {
-
-  interval = Teoria.interval(legalIntervals[Math.floor(Math.random() * legalIntervals.length)]);
-
   const vf = new Vex.Flow.Factory({
     renderer: {selector: '_vex', width: 150, height: 220}
   });
-
   const score = vf.EasyScore();
   const system = vf.System();
-  const rando = Math.floor(Math.random() * startNotes.length);
-  bottomNote = Teoria.note(
-    startNotes[rando] +
-    startAccidentals[Math.floor(Math.random() * startAccidentals.length)] +
-    startOctaves[rando]
-  );
-  
   try {
+    const clef = Math.random() > 0.4 ? 'treble' : 'bass'; // wee bit more treble
+    interval = Teoria.interval(legalIntervals[Math.floor(Math.random() * legalIntervals.length)]);
+    const rando = Math.floor(Math.random() * startNotes[clef].length);
+    bottomNote = Teoria.note(
+      startNotes[clef][rando] +
+      startAccidentals[Math.floor(Math.random() * startAccidentals.length)] +
+      startOctaves[clef][rando]
+    );
     topNote = Teoria.interval(bottomNote, interval.toString());
     system.addStave({
       voices: [
-        score.voice(score.notes(topNote.toString().replace('x', '##') + '/w')),
-        score.voice(score.notes(bottomNote + '/w')),
+        score.voice(score.notes(topNote.toString().replace('x', '##') + '/w', {clef})),
+        score.voice(score.notes(bottomNote + '/w', {clef})),
       ]
-    }).addClef('treble');
+    }).addClef(clef);
 
     vf.draw();    
   } catch(_){
@@ -108,12 +112,34 @@ class App extends Component {
       total: getCount(),
       i: 1,
       audio: getAudio(1),
+      pause: false,
     };
+    window.addEventListener('keydown', (e) => {
+      // space bar
+      if (e.keyCode === 32 || e.charCode === 32) {
+        e.preventDefault();
+        this.play();
+      }
+      // p and P
+      if (e.keyCode === 112 || e.charCode === 112 || e.keyCode === 80 || e.charCode === 80) {
+        e.preventDefault();
+        this.play();
+      }
+      // right arrow
+      if (e.keyCode === 39 || e.charCode === 39) {
+        e.preventDefault();
+        this.nextQuestion();
+      }
+      // n and N
+      if (e.keyCode === 110 || e.charCode === 110 || e.keyCode === 78 || e.charCode === 78) {
+        e.preventDefault();
+        this.nextQuestion();
+      }
+    });
   }
   
   nextQuestion() {
-    this.state.audio.low.pause();
-    this.state.audio.high.pause();
+    this.pause()
     this.setState({
       question: getQuestion(this.state.i + 1),
       answer: getAnswer(this.state.i + 1),
@@ -121,29 +147,37 @@ class App extends Component {
       audio: getAudio(this.state.i + 1),
     });
   }
-  
-  play() {
+ 
+  pause() {
     const low = this.state.audio.low;
     const high = this.state.audio.high;
     low.pause();
     high.pause();
     low.currentTime = 0;
-    high.currentTime = 0; 
+    high.currentTime = 0;
+    this.setState({pause: true});
+  }
+   
+  play() {
+    this.pause();
+    this.setState({pause: false});
+    const low = this.state.audio.low;
+    const high = this.state.audio.high;
     if (iOS) {
       low.play();
       high.play();
       return;
     }
-    let end = false;
     low.play(); 
-    low.addEventListener('ended', () => !end && high.play());
-    high.addEventListener('ended', () => {
-      if (!end) {
-        end = true;
+    setTimeout(() => {
+      if (this.state.pause) return;
+      high.play();
+      setTimeout(() => {
+        if (this.state.pause) return;
         low.currentTime = 0; low.play();
         high.currentTime = 0; high.play();
-      }
-    });
+      }, 1000);
+    }, 1000);
   }
   
   render() {
@@ -185,6 +219,16 @@ class Flashcard extends Component {
     this.state = {
       reveal: false,
     };
+    window.addEventListener('keydown', (e) => {
+      // arrows
+      if (e.keyCode === 38 || e.charCode === 38 || e.keyCode === 40 || e.charCode === 40) {
+        this.flip();
+      }
+      // f and F
+      if (e.keyCode === 102 || e.charCode === 102 || e.keyCode === 70 || e.charCode === 70) {
+        this.flip();
+      }
+    });
   }
 
   componentWillReceiveProps() {
